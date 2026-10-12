@@ -225,7 +225,7 @@ console.log("T5 PASS: blank prompt ignored");
   switchLog = [];
   const msg = "Rate limit exceeded. Please try again later.";
   const fingerprint = (text) => { let h = 0; for (let i = 0; i < text.length; i++) h = (h * 31 + text.charCodeAt(i)) | 0; return (h >>> 0).toString(36); };
-  const key = `${sid}__rate-${fingerprint(`provider.quota|${msg}`)}`.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 180) + ".lock";
+  const key = `${sid}__rate-${head.providerID}/${head.id}-${fingerprint(`provider.quota|${msg}`)}`.replace(/[^A-Za-z0-9._-]/g, "_").slice(0, 180) + ".lock";
   mkdirSync(LOCK_DIR, { recursive: true });
   writeFileSync(join(LOCK_DIR, key), "other-instance");
   stream.push({ type: "session.execution.failed", data: { sessionID: sid, error: { type: "provider.quota", message: msg } } });
@@ -233,6 +233,37 @@ console.log("T5 PASS: blank prompt ignored");
   rmSync(join(LOCK_DIR, key), { force: true });
   if (switchLog.length !== 0) throw new Error("T12 FAIL: held claim should suppress switch");
   console.log("T12 PASS: cross-instance claim suppresses duplicate switch");
+}
+
+// ---- Test 13: already on a paid model -> fall back to the first healthy PAID
+// model (never silently downgrade to a healthy free model) ----
+{
+  const sid = "ses_evtpaid00000000000000000000";
+  const paidCurrent = cfg.chain[11];
+  const firstPaid = cfg.chain[9];
+  sessionModel.set(sid, { providerID: paidCurrent.providerID, id: paidCurrent.id });
+  switchLog = []; promptLog = [];
+  stream.push({ type: "session.execution.failed", data: { sessionID: sid, error: { type: "provider.quota", message: "Rate limit exceeded. Please try again later." } } });
+  await sleep(450);
+  if (switchLog.length !== 1 || switchLog[0].providerID !== firstPaid.providerID || switchLog[0].id !== firstPaid.id)
+    throw new Error(`T13 FAIL: expected paid fallback to ${firstPaid.providerID}/${firstPaid.id}, got ${JSON.stringify(switchLog)}`);
+  console.log("T13 PASS: paid model falls back to first paid model", firstPaid.id);
+}
+
+// ---- Test 14: a failure on the model we just switched TO is handled
+// immediately (the cascade does not stall at one step) ----
+{
+  const sid = "ses_evtcascade00000000000000000";
+  const startModel = cfg.chain[4];
+  sessionModel.set(sid, { providerID: startModel.providerID, id: startModel.id });
+  switchLog = []; promptLog = [];
+  stream.push({ type: "session.execution.failed", data: { sessionID: sid, error: { type: "provider.quota", message: "Rate limit exceeded. Please try again later." } } });
+  await sleep(300);
+  stream.push({ type: "session.execution.failed", data: { sessionID: sid, error: { type: "provider.quota", message: "Rate limit exceeded. Please try again later." } } });
+  await sleep(450);
+  if (switchLog.length !== 2)
+    throw new Error(`T14 FAIL: expected 2 switches (cascade continued), got ${JSON.stringify(switchLog)}`);
+  console.log("T14 PASS: cascade continued to a second fallback");
 }
 
 await dispose();

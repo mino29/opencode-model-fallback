@@ -3,7 +3,7 @@
 All notable changes to this project are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
-## [Unreleased]
+## [1.0.1] - 2026-10-12
 
 ### Added
 - `CONTRIBUTING.md` and `SECURITY.md`.
@@ -15,6 +15,19 @@ This project follows [Semantic Versioning](https://semver.org/).
 - `release.yml`: tests gate an automatic tag + GitHub Release on a version bump;
   npm publishing is opt-in and tokenless via OIDC Trusted Publishing.
 - Commits use a GitHub noreply identity; no personal email is published.
+- Example/default chain: free models first, then paid models with
+  `opencode-go/deepseek-v4-flash` first among them.
+
+### Fixed
+- Free→paid fallback stalled after a single step. Failure de-duplication keyed
+  only on the error message, so a failure on the model just switched to (usually
+  the same "rate limit" text) was mistaken for a duplicate and swallowed. The
+  claim key now includes the current model and a successful switch clears the
+  per-session throttle, so the chain keeps descending within one turn and
+  actually reaches the paid section.
+- A failure on a paid model could downgrade the session to a healthy free model.
+  `pick` now keeps a session that is already on a paid entry inside the paid
+  section until the whole paid section is benched.
 
 ## [1.0.0] - 2026-10-12
 
@@ -39,3 +52,4 @@ This project follows [Semantic Versioning](https://semver.org/).
   portable example config.
 
 [1.0.0]: https://github.com/mino29/opencode-model-fallback/releases/tag/v1.0.0
+[1.0.1]: https://github.com/mino29/opencode-model-fallback/releases/tag/v1.0.1

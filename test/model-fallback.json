@@ -19,8 +19,10 @@
     { "providerID": "opencode", "id": "space-bunny-free" },
     { "providerID": "opencode-go", "id": "step-5-preview-free" },
     { "providerID": "opencode-go", "id": "longcat-2.5-preview-free" },
+    { "providerID": "opencode-go", "id": "deepseek-v4-flash" },
     { "providerID": "opencode-go", "id": "deepseek-v4.1-flash" },
     { "providerID": "opencode-go", "id": "deepseek-v4-pro" },
+    { "providerID": "opencode", "id": "deepseek-v4-flash" },
     { "providerID": "opencode", "id": "deepseek-v4.1-flash" },
     { "providerID": "opencode", "id": "deepseek-v4-pro" }
   ]

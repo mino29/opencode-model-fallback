@@ -23,7 +23,10 @@ providers/models you have configured.
      `provider.quota`. The plugin listens for session failure events, benches +
      switches the model, then **resumes** the turn.
 - **Fallback chain** — an ordered list of `{providerID, id}` entries. The plugin
-  picks the first healthy, not-benched, not-already-tried entry.
+  picks the first healthy, not-benched, not-already-tried entry. Entries whose id
+  ends in `-free` are treated as the free tier: while the session is already on a
+  paid entry, picking stays inside the paid section, so a paid fallback never
+  silently downgrades to a healthy free model.
 - **Per-model cooldown / bench** with exponential penalty for consecutive
   failures, plus a longer cooldown for auth failures.
 - **Cross-instance de-duplication** — an exclusive lock file keyed by
@@ -132,14 +135,22 @@ The plugin looks for a config in this order (first match wins):
   // Collapse a burst of failure events (step.failed + execution.failed + error)
   // into one switch.
   "eventDebounceMs": 1200,
-  // Ignore further failures for a session for this long after handling one.
+  // Upper bound on the per-session handling throttle, in ms. A successful
+  // switch clears it, so a genuine failure on the newly selected model is
+  // handled right away and the chain keeps advancing instead of stalling.
   "eventThrottleMs": 5000,
   // Optional log file. A leading "~/" is expanded to your home directory.
   // Empty string = console only (OpenCode captures console output).
   "logFile": "~/.local/share/opencode/log/model-fallback.log",
-  // Ordered fallback chain.
+  // Ordered fallback chain: free models first, then paid models. Among the paid
+  // entries the first one is preferred.
   "chain": [
     { "providerID": "opencode", "id": "step-5-preview-free" },
+    { "providerID": "opencode", "id": "longcat-2.5-preview-free" },
+    { "providerID": "opencode-go", "id": "step-5-preview-free" },
+    { "providerID": "opencode-go", "id": "longcat-2.5-preview-free" },
+    { "providerID": "opencode-go", "id": "deepseek-v4-flash" },
+    { "providerID": "opencode-go", "id": "deepseek-v4.1-flash" },
     { "providerID": "opencode-go", "id": "deepseek-v4-pro" }
   ]
 }
@@ -179,8 +190,8 @@ treated as switch-worthy.
 Set `logFile` to get a dedicated log (recommended). Lines look like:
 
 ```
-[2026-10-12T13:40:49.000Z] armed: chain=13 head=opencode/step-5-preview-free tail=opencode/deepseek-v4-pro
-[2026-10-12T13:41:02.000Z] config loaded from /home/me/.config/opencode/model-fallback.json (chain=13)
+[2026-10-12T13:40:49.000Z] armed: chain=7 head=opencode/step-5-preview-free tail=opencode/deepseek-v4-pro
+[2026-10-12T13:41:02.000Z] config loaded from /home/me/.config/opencode/model-fallback.json (chain=7)
 [2026-10-12T13:41:10.000Z] switch ses_ed194bf7 opencode/step-5-preview-free -> opencode/ling-3.1-flash-free (retry rate status=429 streak=1 bench=1800s)
 [2026-10-12T13:41:10.000Z] switch ses_ed194bf7 opencode/space-bunny-free -> opencode/step-5-preview-free (event rate type=provider.invalid-output streak=1 bench=1800s)
 [2026-10-12T13:41:10.000Z] resumed ses_ed194bf7
@@ -206,7 +217,10 @@ The harness mocks the OpenCode plugin context and drives both mechanisms; it
 exits non-zero on the first failure. It covers rate/auth retries, chain
 advancing, transient-error ignoring, the quota event path (+ resume), event
 de-duplication, content-filter/invalid-request non-switching, deprecated-model
-switching, and cross-instance claim locking.
+switching, cross-instance claim locking, paid-section preference (a paid model
+falls back to the first paid model, never to a healthy free one) and cascade
+continuation (a failure on the just-switched-to model is handled immediately
+rather than stalling the chain).
 
 ---
 

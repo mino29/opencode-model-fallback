@@ -313,39 +313,66 @@ var src_default = {
       }
     };
 
+    // A chain entry is "free" when its id ends in "-free" (every free model in
+    // the OpenCode catalog does; paid models never do). Used so that a fallback
+    // already running on a paid model never silently downgrades to a free one.
+    const isFreeRef = (ref) => /-free$/i.test(String(ref?.id ?? ""));
     const pick = async (sessionID, current) => {
       const now = Date.now();
       const seen = walked.get(sessionID);
-      const rejected = {};
+      const rejected = new Map();
       const reject = (reason, key) => {
-        (rejected[reason] ??= []).push(key);
+        let set = rejected.get(reason);
+        if (!set) {
+          set = new Set();
+          rejected.set(reason, set);
+        }
+        set.add(key);
       };
-      for (const ref of cfg.chain) {
+      const tryRef = async (ref) => {
         const key = keyOf(ref);
         if (current && key === keyOf(current)) {
           reject("current", key);
-          continue;
+          return undefined;
         }
         if (seen?.has(key)) {
           reject("already-tried", key);
-          continue;
+          return undefined;
         }
         const until = cooldown.get(key) ?? 0;
         if (until > now) {
           reject(`benched-${Math.ceil((until - now) / 60000)}m`, key);
-          continue;
+          return undefined;
         }
         const available = await isAvailable(ref);
         if (!available) {
           reject("unavailable", key);
-          continue;
+          return undefined;
         }
         return ref;
+      };
+      const scan = async (entries) => {
+        for (const ref of entries) {
+          const hit = await tryRef(ref);
+          if (hit) return hit;
+        }
+        return undefined;
+      };
+      let target;
+      // Already on a paid model: stay in the paid section if anything there is
+      // healthy, so we never bounce from paid back to a healthy free model.
+      if (current && !isFreeRef(current)) {
+        target = await scan(cfg.chain.filter((ref) => !isFreeRef(ref)));
+        if (target) {
+          lastRejections = "";
+          return target;
+        }
       }
-      lastRejections = Object.entries(rejected)
-        .map(([reason, keys]) => `${reason}: ${keys.join(", ")}`)
+      target = await scan(cfg.chain);
+      lastRejections = [...rejected.entries()]
+        .map(([reason, keys]) => `${reason}: ${[...keys].join(", ")}`)
         .join(" | ");
-      return undefined;
+      return target;
     };
 
     const clearResume = (sessionID) => {
@@ -373,6 +400,10 @@ var src_default = {
         model: { providerID: to.providerID, id: to.id }
       });
       displaced.add(sessionID);
+      // A switch resolves the failure that triggered it: drop the throttle so a
+      // genuine failure on the *new* model is handled right away instead of
+      // being swallowed (which used to stall the cascade at one step).
+      handlingUntil.delete(sessionID);
       const fromText = from ? keyOf(from) : "unknown";
       log(`switch ${sessionID.slice(0, 12)} ${fromText} -> ${keyOf(to)} (${note})`);
     };
@@ -480,7 +511,7 @@ var src_default = {
     };
     // Coalesce the burst of events a single failed turn emits
     // (session.step.failed followed by session.execution.failed / session.error).
-    const onEvent = (event) => {
+    const onEvent = async (event) => {
       if (!event || !FAILURE_EVENTS.has(event.type))
         return;
       if (!cfg.enabled || cfg.chain.length === 0)
@@ -495,9 +526,20 @@ var src_default = {
       const failure = classifyFailure(error);
       if (!failure)
         return;
+      // Include the *current* model in the claim. The event burst for one
+      // failure names the model that failed, but a later failure on the model we
+      // just switched TO (typically the same "rate limit" text) must NOT be
+      // mistaken for a duplicate of the earlier one -- doing so stalled the
+      // fallback at a single step and it never reached the paid section.
+      let modelKey = "unknown";
+      try {
+        const current = await currentModelOf(sessionID);
+        if (current)
+          modelKey = keyOf(current);
+      } catch {}
       // group the step.failed + execution.failed (+ session.error) event burst
       // that describes the same underlying failure into one claim.
-      if (!claim(sessionID, `${failure}-${fingerprint(`${error?.type ?? ""}|${error?.message ?? ""}`)}`))
+      if (!claim(sessionID, `${failure}-${modelKey}-${fingerprint(`${error?.type ?? ""}|${error?.message ?? ""}`)}`))
         return;
       const pending = failureTimers.get(sessionID);
       if (pending?.timer)
@@ -518,7 +560,7 @@ var src_default = {
       try {
         for await (const event of ctx.event.subscribe({ signal: eventController.signal })) {
           try {
-            onEvent(event);
+            await onEvent(event);
           } catch {}
         }
       } catch (error) {
