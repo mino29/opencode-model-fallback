@@ -1,0 +1,27 @@
+{
+  "enabled": true,
+  "cooldownMs": 1800000,
+  "cooldownMaxMs": 21600000,
+  "consecutivePenalty": 2,
+  "authCooldownMs": 7200000,
+  "restoreChainHeadOnNewPrompt": true,
+  "reloadMs": 15000,
+  "eventDebounceMs": 1200,
+  "eventThrottleMs": 5000,
+  "logFile": "~/.local/share/opencode/log/model-fallback.log",
+  "chain": [
+    { "providerID": "opencode", "id": "step-5-preview-free" },
+    { "providerID": "opencode", "id": "longcat-2.5-preview-free" },
+    { "providerID": "opencode", "id": "mimo-v2.6-flash-free" },
+    { "providerID": "opencode", "id": "ling-3.1-flash-free" },
+    { "providerID": "opencode", "id": "nemotron-3.5-lightning-free" },
+    { "providerID": "opencode", "id": "muse-spark-1.3-contributor-free" },
+    { "providerID": "opencode", "id": "space-bunny-free" },
+    { "providerID": "opencode-go", "id": "step-5-preview-free" },
+    { "providerID": "opencode-go", "id": "longcat-2.5-preview-free" },
+    { "providerID": "opencode-go", "id": "deepseek-v4.1-flash" },
+    { "providerID": "opencode-go", "id": "deepseek-v4-pro" },
+    { "providerID": "opencode", "id": "deepseek-v4.1-flash" },
+    { "providerID": "opencode", "id": "deepseek-v4-pro" }
+  ]
+}
