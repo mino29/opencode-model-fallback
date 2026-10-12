@@ -24,7 +24,7 @@ import os from "os";
 import path from "path";
 // Kept in step with package.json; surfaced in the startup log so the loaded
 // version of a running server can be identified and plugin hot-reloads verified.
-var PLUGIN_VERSION = "1.0.1";
+var PLUGIN_VERSION = "1.0.2";
 
 var DEFAULTS = {
   enabled: true,

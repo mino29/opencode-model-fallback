@@ -1,6 +1,6 @@
 {
   "name": "opencode-model-fallback",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "OpenCode plugin that automatically switches a session to the next model in a fallback chain when a provider rate-limits or a free-tier quota is exhausted.",
   "type": "module",
   "main": "index.js",

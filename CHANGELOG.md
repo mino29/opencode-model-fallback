@@ -3,6 +3,12 @@
 All notable changes to this project are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [1.0.2] - 2026-10-12
+
+### Changed
+- Startup log now includes the plugin version (`armed (v1.0.2): …`) so the
+  version loaded by a running server can be confirmed from the log.
+
 ## [1.0.1] - 2026-10-12
 
 ### Added
@@ -17,8 +23,6 @@ This project follows [Semantic Versioning](https://semver.org/).
 - Commits use a GitHub noreply identity; no personal email is published.
 - Example/default chain: free models first, then paid models with
   `opencode-go/deepseek-v4-flash` first among them.
-- Startup log now includes the plugin version (`armed (v1.0.1): …`) so the
-  version loaded by a running server can be confirmed.
 
 ### Fixed
 - Free→paid fallback stalled after a single step. Failure de-duplication keyed
@@ -55,3 +59,4 @@ This project follows [Semantic Versioning](https://semver.org/).
 
 [1.0.0]: https://github.com/mino29/opencode-model-fallback/releases/tag/v1.0.0
 [1.0.1]: https://github.com/mino29/opencode-model-fallback/releases/tag/v1.0.1
+[1.0.2]: https://github.com/mino29/opencode-model-fallback/releases/tag/v1.0.2
