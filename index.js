@@ -22,6 +22,9 @@
 import fs from "fs";
 import os from "os";
 import path from "path";
+// Kept in step with package.json; surfaced in the startup log so the loaded
+// version of a running server can be identified and plugin hot-reloads verified.
+var PLUGIN_VERSION = "1.0.1";
 
 var DEFAULTS = {
   enabled: true,
@@ -603,7 +606,7 @@ var src_default = {
       }
     });
 
-    log(`armed: chain=${cfg.chain.length} head=${cfg.chain[0] ? keyOf(cfg.chain[0]) : "none"} tail=${cfg.chain.length ? keyOf(cfg.chain[cfg.chain.length - 1]) : "none"}`);
+    log(`armed (v${PLUGIN_VERSION}): chain=${cfg.chain.length} head=${cfg.chain[0] ? keyOf(cfg.chain[0]) : "none"} tail=${cfg.chain.length ? keyOf(cfg.chain[cfg.chain.length - 1]) : "none"}`);
     await auditProviders();
 
     const dispose = async () => {

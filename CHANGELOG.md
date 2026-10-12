@@ -17,6 +17,8 @@ This project follows [Semantic Versioning](https://semver.org/).
 - Commits use a GitHub noreply identity; no personal email is published.
 - Example/default chain: free models first, then paid models with
   `opencode-go/deepseek-v4-flash` first among them.
+- Startup log now includes the plugin version (`armed (v1.0.1): …`) so the
+  version loaded by a running server can be confirmed.
 
 ### Fixed
 - Free→paid fallback stalled after a single step. Failure de-duplication keyed

@@ -190,7 +190,7 @@ treated as switch-worthy.
 Set `logFile` to get a dedicated log (recommended). Lines look like:
 
 ```
-[2026-10-12T13:40:49.000Z] armed: chain=7 head=opencode/step-5-preview-free tail=opencode/deepseek-v4-pro
+[2026-10-12T13:40:49.000Z] armed (v1.0.1): chain=7 head=opencode/step-5-preview-free tail=opencode/deepseek-v4-pro
 [2026-10-12T13:41:02.000Z] config loaded from /home/me/.config/opencode/model-fallback.json (chain=7)
 [2026-10-12T13:41:10.000Z] switch ses_ed194bf7 opencode/step-5-preview-free -> opencode/ling-3.1-flash-free (retry rate status=429 streak=1 bench=1800s)
 [2026-10-12T13:41:10.000Z] switch ses_ed194bf7 opencode/space-bunny-free -> opencode/step-5-preview-free (event rate type=provider.invalid-output streak=1 bench=1800s)
