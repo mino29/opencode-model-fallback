@@ -3,6 +3,19 @@
 All notable changes to this project are documented here.
 This project follows [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+- `CONTRIBUTING.md` and `SECURITY.md`.
+- Dependabot configuration for GitHub Actions.
+
+### Changed
+- CI and release workflows pin actions to commit SHAs and use least-privilege
+  `permissions`.
+- `release.yml`: tests gate an automatic tag + GitHub Release on a version bump;
+  npm publishing is opt-in and tokenless via OIDC Trusted Publishing.
+- Commits use a GitHub noreply identity; no personal email is published.
+
 ## [1.0.0] - 2026-10-12
 
 ### Added

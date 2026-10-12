@@ -1,0 +1,9 @@
+version: 2
+updates:
+  # Keep the SHA-pinned workflow actions current. Dependabot understands pinned
+  # commits and will open PRs that bump both the SHA and the version comment.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5

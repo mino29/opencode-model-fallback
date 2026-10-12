@@ -226,6 +226,18 @@ switching, and cross-instance claim locking.
 
 Then delete `~/.config/opencode/model-fallback.json` if you no longer want it.
 
+## Privacy
+
+The plugin makes **no network requests and collects no telemetry**. It only
+reads your local `model-fallback.json`, talks to your local OpenCode server, and
+— if `logFile` is configured — appends to a local file. Nothing leaves your
+machine.
+
+## Contributing & Security
+
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the development and release
+workflow, and [SECURITY.md](./SECURITY.md) to report a vulnerability privately.
+
 ## License
 
 MIT — see [LICENSE](./LICENSE).

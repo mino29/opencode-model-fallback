@@ -1,0 +1,106 @@
+name: Release
+
+# Tag + publish on a version bump. The version comes from package.json; if no
+# matching `vX.Y.Z` tag exists yet, one is created and a GitHub Release is made.
+# Nothing is published to npm unless you explicitly opt in (see below).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# Least privilege by default; each job elevates only what it needs.
+permissions:
+  contents: read
+
+# Never cancel a release half-way through.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  # Tests gate the release: a broken build is never tagged.
+  test:
+    name: Test (bun)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        with:
+          bun-version: latest
+      - name: Run plugin self-test
+        run: bun test/test.mjs
+
+  release:
+    name: Tag & release
+    needs: test
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # create the tag and the GitHub Release
+    outputs:
+      created: ${{ steps.check.outputs.exists == 'false' }}
+      tag: ${{ steps.check.outputs.tag }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+
+      - name: Read version and detect an existing tag
+        id: check
+        run: |
+          VERSION=$(sed -nE 's/^[[:space:]]*"version":[[:space:]]*"([^"]+)".*/\1/p' package.json | head -n1)
+          if [ -z "$VERSION" ]; then
+            echo "::error::Could not read \"version\" from package.json"
+            exit 1
+          fi
+          TAG="v$VERSION"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          if git ls-remote --tags origin "refs/tags/$TAG" | grep -q .; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+            echo "Tag $TAG already exists; nothing to release."
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Create and push the tag
+        if: steps.check.outputs.exists == 'false'
+        run: |
+          git tag -a "${{ steps.check.outputs.tag }}" -m "${{ steps.check.outputs.tag }}"
+          git push origin "${{ steps.check.outputs.tag }}"
+
+      - name: Publish the GitHub Release
+        if: steps.check.outputs.exists == 'false'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${{ steps.check.outputs.tag }}" \
+            --title "${{ steps.check.outputs.tag }}" \
+            --generate-notes
+
+  # Opt-in, tokenless npm publishing via OIDC "Trusted Publishing".
+  #
+  # Disabled by default for safety. To enable:
+  #   1. Configure a Trusted Publisher for the package on npmjs.com
+  #      (org/user `mino29`, repo `opencode-model-fallback`, workflow `release.yml`).
+  #   2. Set the repository variable NPM_PUBLISH=true
+  #      (Settings -> Secrets and variables -> Actions -> Variables).
+  # No NPM_TOKEN is ever stored; GitHub mints a short-lived OIDC token instead.
+  publish:
+    name: Publish to npm (opt-in)
+    needs: release
+    if: needs.release.outputs.created == 'true' && vars.NPM_PUBLISH == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # OIDC -> npm Trusted Publishing; no long-lived secret
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: 22
+          registry-url: https://registry.npmjs.org
+      - name: Publish to npm with provenance
+        run: |
+          npm install -g npm@latest
+          npm publish --provenance --access public
